@@ -181,7 +181,7 @@ def training(model,criterion,optimizer,args,device,dataloaders):
 
 
                     print(f"Epoch: {epoch+1}/{args.epochs}.."
-                          f"Training_loss: {running_loss/(i*len(trainloader)):.3f}.."
+                          f"Training_loss: {running_loss/(print_every):.3f}.."
                           f"Validation loss: {valid_loss/len(validloader):.3f}.."
                           f"Validation Accuracy: {accuracy/len(validloader):.3f}..")
                     running_loss=0
