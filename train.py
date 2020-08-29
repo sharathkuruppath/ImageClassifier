@@ -14,6 +14,11 @@ import json
 import re
 
 def input_args():
+    ''' 
+        Description :Predict the class (or classes) of an image using a trained deep learning model.
+        params : none 
+        returns : Parsed arguments from the command line
+    '''
     parser=argparse.ArgumentParser(description='Training')
     parser.add_argument('--data_dir',type=str,default='flowers',help='Path to the image directory')
     parser.add_argument('--arch',type=str,default='vgg16',help='Architecture eg: vgg16 or densenet161')
@@ -28,7 +33,12 @@ def input_args():
     return args
 
 def dataseperation(data_dir):
-    #Seperating Data into train,validation and test datasets
+    ''' 
+        Description :Seperating Data into train,validation and test datasets
+        params : data_dir -Data directory
+        returns : dataloaders,datatransforms,datacollection
+    '''
+    #
     train_dir = data_dir + '/train'
     valid_dir = data_dir + '/valid'
     test_dir = data_dir + '/test'
@@ -72,6 +82,11 @@ def dataseperation(data_dir):
 
     
 def torch_device(inp_device):
+    ''' 
+        Description : Load the device chosen by tge user
+        params : inp_device -cpu or gpu
+        returns : loaded device
+    '''
     print(inp_device)
     if inp_device:
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,6 +97,12 @@ def torch_device(inp_device):
     return device      
 
 def create_model(device,args):
+    ''' 
+        Description :Create model with architecture given by the user
+        params : device -cpu or gpu
+                 args- command line arg
+        returns : model
+    '''
     # Citation Mentor Prasun S in Ask a Mentor 
     print('Args:',args.arch)
     if re.search('vgg',args.arch):
@@ -126,6 +147,16 @@ def create_model(device,args):
     return model,criterion,optimizer
 
 def training(model,criterion,optimizer,args,device,dataloaders):
+    ''' 
+        Description :train the model
+        params : model - loaded model
+                 criterion
+                 optimizer
+                 args- command line arg
+                 device -cpu or gpu
+                 dataloaders- for training dataloader
+        returns :trained model
+    '''
     print('Device:',device)
     model.to(device)
     steps=0
@@ -188,6 +219,14 @@ def training(model,criterion,optimizer,args,device,dataloaders):
                     model.train()
     return model               
 def testing(device,model,criterion,dataloaders):
+    ''' 
+        Description : train the model with testing set
+        params : device - cpu or gpu
+                 model - model with adjusted weights after training and validation 
+                 criterion - top 'k' probabilities which predicts the image correctly
+                 dataloaders- Dataloaders using the image datasets and the trainforms
+        returns : testing loss and accuracy
+    '''    
     model.eval()
     testloader=dataloaders['test']
     test_loss=0

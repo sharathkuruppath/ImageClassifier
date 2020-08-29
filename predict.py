@@ -15,7 +15,11 @@ import re
 
 # Parsing Arguments
 def input_args():
-
+    ''' 
+        Description :Predict the class (or classes) of an image using a trained deep learning model.
+        params : none 
+        returns : Parsed arguments from the command line
+    '''
     
     parser=argparse.ArgumentParser(description='Prediction')
     parser.add_argument('--image_path',type=str,help='Path to the image directory eg : test/23/image_03382.jpg')
@@ -29,6 +33,11 @@ def input_args():
 
 # TODO: Write a function that loads a checkpoint and rebuilds the model
 def load_checkpoint(args,device):
+    ''' 
+        Description :loades the saved model from the checkpoint.
+        params : filepath - checkpoint file
+        returns : trained model
+    '''
     
     if re.search('vgg',args.check_point):
         checkpoint = torch.load('trained_model_vgg.pth')
@@ -60,9 +69,13 @@ def load_checkpoint(args,device):
     return model
 
 def process_image(image):
-    ''' Scales, crops, and normalizes a PIL image for a PyTorch model,
-        returns an Numpy array
     ''' 
+        Description :Scales, crops, and normalizes a PIL image for a PyTorch model,
+        returns an Numpy array
+        params : image - Image file along with its absolute path
+          
+        returns : Numpy image
+    '''
 
 
     #print(image)
@@ -105,7 +118,12 @@ def process_image(image):
     return np_image
 
 def predict(np_image, model, device,topk):
-    ''' Predict the class (or classes) of an image using a trained deep learning model.
+    ''' 
+        Description :Predict the class (or classes) of an image using a trained deep learning model.
+        params : image_path - Image file along with its absolute path
+                 model - saved model after training
+                 topk - top 'k' probabilities which predicts the image correctly 
+        returns : topk probabilities and their classes
     '''
     
     # TODO: Implement the code to predict the class from an image file
@@ -132,6 +150,11 @@ def predict(np_image, model, device,topk):
     return top_p, top_class
 
 def flower_category(cat_to_name):
+    ''' 
+        Description :load the json file containing the labels and the names of the flowers.
+        params : json file 
+        returns : dictionary containing labels to the loaded image
+    '''
     with open(cat_to_name, 'r') as f:
         cat_to_name = json.load(f)
     return cat_to_name
