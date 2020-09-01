@@ -14,31 +14,23 @@ import json
 import re
 
 def input_args():
-    ''' 
-        Description :Predict the class (or classes) of an image using a trained deep learning model.
-        params : none 
-        returns : Parsed arguments from the command line
-    '''
+    
     parser=argparse.ArgumentParser(description='Training')
-    parser.add_argument('--data_dir',type=str,default='flowers',help='Path to the image directory')
-    parser.add_argument('--arch',type=str,default='vgg16',help='Architecture eg: vgg16 or densenet161')
+    parser.add_argument('data_dir',type=str,help='Path to the image directory')
+    parser.add_argument('--arch',type=str,default='vgg16',help='Architecture eg: vgg16 or alexnet')
     parser.add_argument('--learning_rate',type=float,default=0.001,help='Learning Rate')
     
     parser.add_argument('--hidden_units',type=int,help='Hidden Units for the model')
     parser.add_argument('--epochs',type=int,default=7,help='Number of Epochs')
-    parser.add_argument('--save_dir',type=str,default='trained_model_vgg.pth',\
-                        help='Name of the saved  file eg:trained_model_vgg.pth, or trained_model_densenet.pth')
-    parser.add_argument('--gpu', type=bool, default='True', help='True: gpu, False: cpu')
-    args=parser.parse_args()
-    return args
+    parser.add_argument('--save_dir',type=str,default='.',\
+                        help='Path to the directory where the checkpoint is saved')
+    parser.add_argument('--gpu', action='store_true', help='True: gpu, False: cpu')
+    
+    return parser.parse_args()
 
 def dataseperation(data_dir):
-    ''' 
-        Description :Seperating Data into train,validation and test datasets
-        params : data_dir -Data directory
-        returns : dataloaders,datatransforms,datacollection
-    '''
-    #
+    
+    #Seperating Data into train,validation and test datasets
     train_dir = data_dir + '/train'
     valid_dir = data_dir + '/valid'
     test_dir = data_dir + '/test'
@@ -82,93 +74,68 @@ def dataseperation(data_dir):
 
     
 def torch_device(inp_device):
-    ''' 
-        Description : Load the device chosen by tge user
-        params : inp_device -cpu or gpu
-        returns : loaded device
-    '''
-    print(inp_device)
-    if inp_device:
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device=torch.device("cpu")
-    device=torch.device('cuda:0' if torch.cuda.is_available() else "cpu")
-    print(device)
+   
+    device = torch.device('cuda' if inp_device and torch.cuda.is_available() else 'cpu')
+    
     return device      
 
 def create_model(device,args):
-    ''' 
-        Description :Create model with architecture given by the user
-        params : device -cpu or gpu
-                 args- command line arg
-        returns : model
-    '''
     # Citation Mentor Prasun S in Ask a Mentor 
     print('Args:',args.arch)
-    if re.search('vgg',args.arch):
-        
-        model = models.vgg16(pretrained=True) 
+    
+    if re.search('vgg16',args.arch):       
+        model = models.vgg16(pretrained=True)
+        for param in model.parameters():
+            param.requires_grad=False
         if args.hidden_units==None:
-            args.hidden_units=[6272,1568]
-        model.classifier=nn.Sequential(nn.Linear(25088,args.hidden_units[0]),
+            args.hidden_units=1568
+        model.classifier=nn.Sequential(nn.Linear(25088,6272),
                                        nn.ReLU(),
                                        nn.Dropout(p=0.2),
-                                       nn.Linear(args.hidden_units[0],args.hidden_units[1]),
+                                       nn.Linear(6272,args.hidden_units),
                                        nn.ReLU(),
                                        nn.Dropout(p=0.2),
-                                       nn.Linear(args.hidden_units[1],102),
+                                       nn.Linear(args.hidden_units,102),
                                        nn.LogSoftmax(dim=1))
         
         criterion = nn.NLLLoss()
         optimizer = optim.Adam(model.classifier.parameters(), args.learning_rate)
   
-
- 
-    elif re.search('alexnet',args.arch):
+    elif args.arch == 'alexnet':
         model=models.alexnet(pretrained=True)
+        for param in model.parameters():
+            param.requires_grad=False
         if args.hidden_units==None:
-            args.hidden_units=[4608,2304]
-        model.classifier=nn.Sequential(nn.Linear(9216,args.hidden_units[0]),
+            args.hidden_units=2304
+        model.classifier=nn.Sequential(nn.Linear(9216,4608),
                                        nn.ReLU(),
                                        nn.Dropout(p=0.2),
-                                       nn.Linear(args.hidden_units[0],args.hidden_units[1]),
+                                       nn.Linear(4608,args.hidden_units),
                                        nn.ReLU(),
                                        nn.Dropout(p=0.2),
-                                       nn.Linear(args.hidden_units[1],102),
+                                       nn.Linear(args.hidden_units,102),
                                        nn.LogSoftmax(dim=1)) 
         criterion = nn.NLLLoss()
         optimizer = optim.Adam(model.classifier.parameters(), args.learning_rate)
-        #criterion = nn.CrossEntropyLoss()
-        #optimizer = optim.SGD(model.classifier.parameters(), args.learning_rate)
 
-    #define Criterion and Optimizer Functions
-
-    print(model)
-    return model,criterion,optimizer
+    try:
+        return model,criterion,optimizer
+    except Exception as err:
+        raise Exception("Architecture {} not supported , please choose vgg16 or alexnet".format(args.arch))
 
 def training(model,criterion,optimizer,args,device,dataloaders):
-    ''' 
-        Description :train the model
-        params : model - loaded model
-                 criterion
-                 optimizer
-                 args- command line arg
-                 device -cpu or gpu
-                 dataloaders- for training dataloader
-        returns :trained model
-    '''
-    print('Device:',device)
+    
     model.to(device)
     steps=0
     running_loss=0
     print_every=60
+    
     trainloader=dataloaders['train']
-    print('inside training loop')
-    print(trainloader)
     dataiter=iter(trainloader)
     images,labels=dataiter.next()
     print(type(images))
     print(images.shape)
+    
     validloader=dataloaders['valid']
     with active_session():
         for epoch in range(args.epochs):
@@ -217,16 +184,10 @@ def training(model,criterion,optimizer,args,device,dataloaders):
                           f"Validation Accuracy: {accuracy/len(validloader):.3f}..")
                     running_loss=0
                     model.train()
-    return model               
+    return model  
+
 def testing(device,model,criterion,dataloaders):
-    ''' 
-        Description : train the model with testing set
-        params : device - cpu or gpu
-                 model - model with adjusted weights after training and validation 
-                 criterion - top 'k' probabilities which predicts the image correctly
-                 dataloaders- Dataloaders using the image datasets and the trainforms
-        returns : testing loss and accuracy
-    '''    
+    
     model.eval()
     testloader=dataloaders['test']
     test_loss=0
@@ -247,13 +208,16 @@ def testing(device,model,criterion,dataloaders):
             test_accuracy+=torch.mean(equality.type(torch.FloatTensor))
         print("Test loss: {:.3f} Test Accuracy:{:.3f}".format(test_loss/len(testloader),test_accuracy/len(testloader)))                               
     return  test_loss/len(testloader),  test_accuracy
+
 def save_checkpoint(model,args,optimizer,datacollection):
-    print('State Dict Keys',model.state_dict().keys())
+    
+   
     train_dataset=datacollection['train']
     model.class_to_idx = train_dataset.class_to_idx
+    
     #Citation Mentor Tilak D in Ask a Mentor
-    if re.search('vgg',args.arch):
-        
+    if re.search('vgg16',args.arch):
+        filename='trained_model_vgg16.pth' 
         checkpoint = {
             'input size': 25088,
             'output size': 102,
@@ -267,22 +231,9 @@ def save_checkpoint(model,args,optimizer,datacollection):
             'lr':args.learning_rate
              }
         
-    elif re.search('resnet',args.arch):
-        args.save_dir='trained_model_resnet.pth'
-        checkpoint = {
-            'input size': 512,
-            'output size': 102,
-            'hidden units':args.hidden_units,
-            'state_dict': model.state_dict(),
-            'epochs': args.epochs,
-            'arch':args.arch,
-            'classifier': model.classifier,
-            'optimizer': optimizer.state_dict(),
-            'class_to_idx': model.class_to_idx,
-            'lr':args.learning_rate
-             }
-    elif re.search('alexnet',args.arch):
-        args.save_dir='trained_model_alexnet.pth'
+
+    elif args.arch == 'alexnet':
+        filename='trained_model_alexnet.pth'
         checkpoint = {
             'input size': 9216,
             'output size': 102,
@@ -295,25 +246,38 @@ def save_checkpoint(model,args,optimizer,datacollection):
             'class_to_idx': model.class_to_idx,
             'lr':args.learning_rate
              }   
-    torch.save(checkpoint,args.save_dir)
+    torch.save(checkpoint,(args.save_dir +'/'+filename))
+    
 def main():
     
     args=input_args()
     print("Args:",args)
-    #arch=args.arch
-    #data_dir=args.data_dir
-    #lr=args.learning_rate
-    #input_unit=args.input_unit
-    #hidden_units=args.hidden_units
-    #epochs=args.epochs
-    #inp_device=args.gpu
-    #checkpoint_path=args.save_dir
+
     #Creating Datasets
     dataloaders,datatransforms,datacollection=dataseperation(args.data_dir)
+    
+    #CPU or GPU
     device=torch_device(args.gpu)
-    model,criterion,optimizer=create_model(device,args)
-    model=training(model,criterion,optimizer,args,device,dataloaders)
-    test_loss,test_loader=testing(device,model,criterion,dataloaders)
-    save_checkpoint(model,args,optimizer,datacollection)
+
+    try :
+        
+        #Creating Model
+        model,criterion,optimizer=create_model(device,args)
+        
+        #Training Model
+        model=training(model,criterion,optimizer,args,device,dataloaders)
+        
+        #Testing Model with test dataset
+        test_loss,test_loader=testing(device,model,criterion,dataloaders)
+    
+        #Saving Checkpoint
+        save_checkpoint(model,args,optimizer,datacollection)
+        
+    except  Exception as err: 
+        print(err)
+      
+
+        
+
 if __name__ == "__main__":
     main()
