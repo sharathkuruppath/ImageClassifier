@@ -28,11 +28,11 @@ def input_args():
 # TODO: Write a function that loads a checkpoint and rebuilds the model
 def load_checkpoint(args,device):
     
-    if re.search('vgg16',args.checkpoint):
-        checkpoint = torch.load('trained_model_vgg16.pth')
+    checkpoint = torch.load(args.checkpoint)
+    
+    if re.search('vgg16',args.checkpoint):  
         model = models.vgg16(pretrained=True)
-    elif re.search('alexnet',args.checkpoint):
-        checkpoint = torch.load('trained_model_alexnet.pth')
+    elif re.search('alexnet',args.checkpoint):        
         model = models.alexnet(pretrained=True)
     
     for param in model.parameters():
